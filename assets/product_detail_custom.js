@@ -1,0 +1,1 @@
+export function productSlugFromTitle(title){ if(!title) return ""; var s = String(title).toLowerCase(); if(typeof s.normalize === "function"){ try{ s = s.normalize("NFKD"); }catch(e){} } return s.replace(/[^a-z0-9\s-]/g," ").replace(/\s+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,""); }

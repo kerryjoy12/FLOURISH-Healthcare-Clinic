@@ -1,0 +1,1 @@
+import{n as e}from"./createLucideIcon-Cy0DAjpJ.js";import{t}from"./LegalPage-BJHL71sl.js";var n=e(),r=()=>(0,n.jsx)(t,{docKey:`product-disclaimer`});export{r as component};
