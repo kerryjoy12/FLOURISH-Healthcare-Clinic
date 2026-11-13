@@ -1,11 +1,19 @@
-// Force full page loads for the product section of the local mirror.
+// Force full page loads for the locally generated section of the mirror.
 // The mirrored Base44 SPA handles clicks client-side and renders its own
-// products route, which has no backend data locally and shows the empty
-// "No products found" state. The statically generated /products/ page has
-// the real product grid, so every products link must bypass the SPA router.
+// routes, which have no backend data locally (products shows the empty
+// "No products found" state) or do not exist in the older page bundle at all
+// (gigs, admin). The statically generated pages are the real thing, so every
+// link into these sections must bypass the SPA router.
 (function () {
-  function isProductsPath(pathname) {
-    return pathname === '/products' || pathname === '/products/' || pathname === '/products.html';
+  var STATIC_PATHS = ['/products', '/gigs', '/admin'];
+
+  function staticBase(pathname) {
+    var clean = pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
+    for (var i = 0; i < STATIC_PATHS.length; i++) {
+      var base = STATIC_PATHS[i];
+      if (clean === base || clean.indexOf(base + '/') === 0) return true;
+    }
+    return false;
   }
 
   document.addEventListener('click', function (event) {
@@ -24,10 +32,12 @@
     }
 
     if (url.origin !== window.location.origin) return;
-    if (!isProductsPath(url.pathname)) return;
+    if (!staticBase(url.pathname)) return;
 
     event.preventDefault();
     event.stopPropagation();
-    window.location.assign('/products/');
+    var destination = url.pathname.replace(/\.html$/, '');
+    if (!/\/$/.test(destination)) destination += '/';
+    window.location.assign(destination);
   }, true);
 })();

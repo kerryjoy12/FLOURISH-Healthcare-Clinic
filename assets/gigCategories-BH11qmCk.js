@@ -1,0 +1,1 @@
+var e=[{value:`video`,label:`Product Videos`},{value:`photo`,label:`Product Photography`},{value:`writing`,label:`Product Writing`},{value:`social`,label:`Social Media Posts`}];function t(t){return e.find(e=>e.value===t)?.label||`Creator gig`}var n={open:`Open`,filled:`Filled`,closed:`Closed`};export{n,t as r,e as t};

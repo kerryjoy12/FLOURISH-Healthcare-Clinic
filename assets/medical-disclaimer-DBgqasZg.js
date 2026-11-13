@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-BiX_BIZ9.js";import{t}from"./LegalPage-Ds2K1pA2.js";var n=e(),r=()=>(0,n.jsx)(t,{docKey:`medical-disclaimer`});export{r as component};

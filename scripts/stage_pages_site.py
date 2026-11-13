@@ -50,15 +50,14 @@ def rewrite_js(text, prefix):
 
 
 def rewrite_nav_guard(text, prefix):
-    # The mirror's nav guard forces full page loads for the static product
-    # pages; its hard-coded root-absolute paths need the prefix too.
-    text = text.replace("pathname === '/products'", "pathname === '%s/products'" % prefix)
-    text = text.replace("pathname === '/products/'", "pathname === '%s/products/'" % prefix)
-    text = text.replace("pathname === '/products.html'", "pathname === '%s/products.html'" % prefix)
-    text = text.replace(
-        "window.location.assign('/products/')", "window.location.assign('%s/products/')" % prefix
+    # The mirror's nav guard forces full page loads for the static sections
+    # (products, gigs, admin); its hard-coded root-absolute paths need the
+    # prefix too.
+    return re.sub(
+        r"var STATIC_PATHS = \[[^\]]*\];",
+        "var STATIC_PATHS = ['%s/products', '%s/gigs', '%s/admin'];" % (prefix, prefix, prefix),
+        text,
     )
-    return text
 
 
 def main():
