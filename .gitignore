@@ -3,3 +3,7 @@ __pycache__/
 .DS_Store
 Thumbs.db
 _site/
+# Local mirror scratch dumps (raw page/bundle extracts)
+_gigs_raw.html
+_w.mjs
+_check.html

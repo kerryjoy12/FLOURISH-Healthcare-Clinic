@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/assets/base44_api_bridge.js"></script>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>Se Tablet — Flourish Healthcare Clinic</title>
@@ -153,11 +153,11 @@
 
 <script type="module">
 import { productSlugFromTitle } from '/assets/product_detail_custom.js';
+import { resolveProduct, slugFromLocation } from '/assets/products_source.js';
 
 function slugFromPath() {
-  const parts = window.location.pathname.split('/').filter(Boolean);
-  if (parts[0] !== 'products' || parts.length < 2) return null;
-  return parts[1].replace(/\.html$/i, '');
+  // Works for /products/<slug> and for /products/product.html?slug=<slug>.
+  return slugFromLocation();
 }
 
 function findProduct(products, slug) {
@@ -182,10 +182,7 @@ async function renderDetail() {
   const slug = slugFromPath();
 
   try {
-    const res = await fetch('/products/products.json');
-    if (!res.ok) throw new Error('bad response ' + res.status);
-    const products = await res.json();
-    const product = findProduct(products, slug);
+    const product = await resolveProduct(slug);
 
     if (!product) {
       if (titleEl) titleEl.textContent = 'Product not found';

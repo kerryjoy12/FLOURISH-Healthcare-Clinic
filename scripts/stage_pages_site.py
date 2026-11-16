@@ -37,7 +37,12 @@ def rewrite_html(text, prefix):
     attr = re.compile(r'(\b(?:href|src|action|poster)=")/(?!/)')
     json_href = re.compile(r'("href":")(/(?!/))')
     text = attr.sub(lambda m: m.group(1) + prefix + "/", text)
-    return json_href.sub(lambda m: m.group(1) + prefix + m.group(2), text)
+    text = json_href.sub(lambda m: m.group(1) + prefix + m.group(2), text)
+    # Inline router manifests (and other inline scripts) list asset URLs as
+    # plain root-absolute strings, which the attribute rewrite above misses.
+    text = text.replace('\"/assets/', '\"%s/assets/' % prefix)
+    text = text.replace('\\"/assets/', '\\"%s/assets/' % prefix)
+    return text
 
 
 def rewrite_js(text, prefix):
@@ -46,6 +51,12 @@ def rewrite_js(text, prefix):
     text = text.replace(
         "{basepath:``,serializationAdapters:", "{basepath:`%s`,serializationAdapters:" % prefix
     )
+    # Vite's preload helper and the route head CSS href are built from a
+    # baked-in "/" base, so lazy chunks and the stylesheet would be requested
+    # from the domain root and 404 under a project path. Prefix them too.
+    text = text.replace("return`/`+e}", "return`%s/`+e}" % prefix)
+    text = text.replace("`/assets/", "`%s/assets/" % prefix)
+    text = text.replace('\"/assets/', '\"%s/assets/' % prefix)
     return text
 
 
@@ -57,6 +68,16 @@ def rewrite_nav_guard(text, prefix):
         r"var STATIC_PATHS = \[[^\]]*\];",
         "var STATIC_PATHS = ['%s/products', '%s/gigs', '%s/admin'];" % (prefix, prefix, prefix),
         text,
+    )
+
+
+def rewrite_post_stage(text, prefix):
+    # The mirror baked local dev bootstrap metadata into the pages
+    # (data-platform-url="http://localhost:8000"), which points the badge and
+    # analytics at a dev server. Drop the host so they use the page's own
+    # origin, matching the live build.
+    return text.replace(
+        'data-platform-url="http://localhost:8000"', 'data-platform-url="/"'
     )
 
 
@@ -78,6 +99,7 @@ def main():
                 with open(path, encoding="utf-8", errors="surrogateescape") as fh:
                     original = fh.read()
                 updated = rewrite_html(original, prefix)
+                updated = rewrite_post_stage(updated, prefix)
                 if updated != original:
                     counts["html"] += 1
             elif name.endswith(".js"):
@@ -87,6 +109,7 @@ def main():
                     updated = rewrite_nav_guard(original, prefix)
                 else:
                     updated = rewrite_js(original, prefix)
+                updated = rewrite_post_stage(updated, prefix)
                 if updated != original:
                     counts["nav_guard" if name == "site_nav_guard.js" else "js"] += 1
             else:

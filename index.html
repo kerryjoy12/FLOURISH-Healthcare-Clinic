@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en"><head><script src="/assets/base44_api_bridge.js"></script>
 <script src="/assets/site_nav_guard.js"></script><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1" name="viewport"/><link data-precedence="default" href="/assets/index-BfncppvB.css" rel="stylesheet"/><link data-precedence="default" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/><title>Flourish Healthcare Clinic — Quality Care. Healthier Lives.</title><meta content="A natural and holistic health clinic: women's health, men's health, adult and senior care, digestive health and general wellness services, plus herbal remedies and natural products. Enquire without creating an account." name="description"/><link href="/assets/index-CMA41hEC.js" rel="modulepreload"/><link href="/assets/createLucideIcon-Cy0DAjpJ.js" rel="modulepreload"/><link href="/assets/react-dom-CqW2IEsP.js" rel="modulepreload"/><link href="/assets/redirect-DmtLUW0N.js" rel="modulepreload"/><link href="/assets/link-WZEzV_WV.js" rel="modulepreload"/><link href="/assets/useMatch-aH8jqHfP.js" rel="modulepreload"/><link href="/assets/preload-helper-QCFuTlbN.js" rel="modulepreload"/><link href="/assets/CatchBoundary-8jWn_zfB.js" rel="modulepreload"/><link href="/assets/base44Client-Cx3n6m5h.js" rel="modulepreload"/><link href="/assets/dist-D2g-OUFF.js" rel="modulepreload"/><link href="/assets/utils-FREdMtAG.js" rel="modulepreload"/><link href="/assets/services-CkuMKikZ.js" rel="modulepreload"/><link href="/assets/_site-Cp9bR8DR.js" rel="modulepreload"/><link href="/assets/mail-D91BFo7z.js" rel="modulepreload"/><link href="/assets/map-pin-C26xqkTV.js" rel="modulepreload"/><link href="/assets/clinic-D5ZENBpW.js" rel="modulepreload"/><link href="/assets/phone-CLyg6TSa.js" rel="modulepreload"/><link href="/assets/x-DuWJHbOr.js" rel="modulepreload"/><link href="/assets/Wordmark-D4QpGs0N.js" rel="modulepreload"/><link href="/assets/_site-Dw_5g_zE.js" rel="modulepreload"/><link href="/assets/arrow-right-2BuwLCxq.js" rel="modulepreload"/><link href="/assets/loader-circle-CyaLvnE8.js" rel="modulepreload"/><link href="/assets/shield-check-Cy74H6Bj.js" rel="modulepreload"/><link href="/assets/productCategories-B5BHso9a.js" rel="modulepreload"/><link href="/assets/catalogue-e3ClRxMP.js" rel="modulepreload"/><link href="/assets/image-Dv13VoBu.js" rel="modulepreload"/><link href="/assets/ContactCta-CChF0JYW.js" rel="modulepreload"/><link href="/assets/ServiceCard-DM1QShZf.js" rel="modulepreload"/><link href="/assets/ProductCard-77Y2d8QN.js" rel="modulepreload"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="anonymous" href="https://fonts.gstatic.com" rel="preconnect"/><link href="/static/images/logo.png" rel="icon"/><script async="true" data-app-id="6af56fca9ccc8d90f1eccb17" data-platform-url="http://localhost:8000" src="/static/js/badge.js"></script><meta content="on" name="base44-analytics"/><script id="b44-consent-listener">(function () {
   if (window.__b44Consent) return;
   var state = {};
@@ -251,10 +251,11 @@ if (window.self === window.top) {
 </script>
 <script type="module">
 import { renderProducts } from '/assets/products_index_custom.js';
+import { loadProducts, productUrl } from '/assets/products_source.js';
 
 // The Base44 app renders this section itself and, with no backend available
 // locally, replaces the product list with a "being updated" notice. We fill
-// that slot with three random products from our local catalogue instead.
+// that slot with three random products from the admin-managed catalogue.
 let pool = [];
 let grid = null;
 let refreshBtn = null;
@@ -275,7 +276,7 @@ function paint() {
     const p = picked[i];
     if (!p || !p.slug) return;
     const link = document.createElement('a');
-    link.href = '/products/' + p.slug;
+    link.href = productUrl(p.slug);
     link.className = 'block h-full no-underline';
     link.appendChild(card);
     grid.appendChild(link);
@@ -337,9 +338,7 @@ function sync() {
 
 async function init() {
   try {
-    const res = await fetch('/products/products.json');
-    if (!res.ok) throw new Error('bad response ' + res.status);
-    pool = (await res.json()).filter(function (p) { return p.title && p.image && p.slug; });
+    pool = (await loadProducts()).filter(function (p) { return p.title && p.image && p.slug; });
   } catch (err) {
     console.warn('home products strip:', err);
   }

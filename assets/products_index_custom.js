@@ -33,14 +33,13 @@ export function renderProducts(gridEl, products){
 
     let imgSrc = (p.image && typeof p.image === 'string') ? p.image : '';
     if (imgSrc){
-      // Source data stores images as "images/<name>.jpg"; served from /products/images/.
-      if (imgSrc.startsWith('images/')) {
-        imgSrc = '/products/' + imgSrc;
-      } else if (!imgSrc.startsWith('/')) {
-        imgSrc = '/products/' + imgSrc;
+      // Absolute URLs (admin image_url, e.g. https://…/products/images/x.jpg)
+      // are used as-is; only the snapshot's relative "images/<name>.jpg"
+      // paths are resolved under /products/.
+      if (!/^(https?:)?\/\//i.test(imgSrc)) {
+        imgSrc = imgSrc.startsWith('images/') ? '/products/' + imgSrc : '/products/' + imgSrc;
       }
       img.src = imgSrc;
-      img.src = img.src;
       img.onerror = function(){
         this.style.display = 'none';
         imgWrap.classList.add('flex', 'items-center', 'justify-center');

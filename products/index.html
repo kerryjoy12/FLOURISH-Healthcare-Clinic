@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/assets/base44_api_bridge.js"></script>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>Our Products — Flourish Healthcare Clinic</title>
@@ -77,13 +77,8 @@
             <svg class="lucide lucide-search h-4 w-4 text-muted-foreground" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
             <input class="w-full bg-transparent py-3 text-[15px] outline-none placeholder:text-muted-foreground/70" placeholder="Search healthcare products" value=""/>
           </div>
-          <div class="mt-4 flex flex-wrap gap-2">
+          <div class="mt-4 flex flex-wrap gap-2" id="products-filters">
             <a aria-current="page" class="rounded-full border px-4 py-2 text-[12.5px] transition-colors border-primary bg-primary text-primary-foreground active" data-status="active" href="/products">All products</a>
-            <a class="rounded-full border px-4 py-2 text-[12.5px] transition-colors border-primary/20 text-primary/80 hover:border-primary/40" href="/products?category=women">Women's Health</a>
-            <a class="rounded-full border px-4 py-2 text-[12.5px] transition-colors border-primary/20 text-primary/80 hover:border-primary/40" href="/products?category=men">Men's Health</a>
-            <a class="rounded-full border px-4 py-2 text-[12.5px] transition-colors border-primary/20 text-primary/80 hover:border-primary/40" href="/products?category=joint">Joint, Bone &amp; Mobility</a>
-            <a class="rounded-full border px-4 py-2 text-[12.5px] transition-colors border-primary/20 text-primary/80 hover:border-primary/40" href="/products?category=digestive">Digestive Health</a>
-            <a class="rounded-full border px-4 py-2 text-[12.5px] transition-colors border-primary/20 text-primary/80 hover:border-primary/40" href="/products?category=general">General Health &amp; Wellness</a>
           </div>
         </div>
 
@@ -294,15 +289,14 @@ Ashwagandha coffee combines the stimulating effects of coffee with the adaptogen
 </script>
 <script type="module">
 import { renderProducts } from '/assets/products_index_custom.js';
+import {
+  loadProducts,
+  categoriesOf,
+  matchesCategory,
+  productUrl
+} from '/assets/products_source.js';
 
-const CATEGORY_ORDER = ["Women's Health", "Men's Health", "Adult & Senior Care", "Digestive Health", "General Healthcare"];
-const URL_CATEGORY = {
-  women: "Women's Health",
-  men: "Men's Health",
-  joint: "Adult & Senior Care",
-  digestive: "Digestive Health",
-  general: "General Healthcare"
-};
+let ALL_PRODUCTS = [];
 
 function cardsFor(products) {
   const temp = document.createElement('div');
@@ -322,101 +316,101 @@ function decorate(card, product) {
   card.appendChild(view);
 
   const link = document.createElement('a');
-  link.href = '/products/' + product.slug;
+  link.href = productUrl(product.slug);
   link.className = 'block h-full no-underline';
   link.appendChild(card);
   return link;
 }
 
-function heading(text, count) {
-  const wrap = document.createElement('div');
-  wrap.className = 'col-span-full mt-10 border-t border-primary/15 pt-6 first:mt-0 first:pt-0 first:border-t-0';
+const PILL_BASE = 'rounded-full border px-4 py-2 text-[12.5px] transition-colors';
+const PILL_IDLE = 'border-primary/20 text-primary/80 hover:border-primary/40';
+const PILL_ACTIVE = 'border-primary bg-primary text-primary-foreground active';
 
-  const h = document.createElement('h2');
-  h.className = 'font-display text-[1.75rem] leading-tight text-foreground';
-  h.textContent = text;
-  wrap.appendChild(h);
-
-  const sub = document.createElement('p');
-  sub.className = 'mt-1 text-[13px] text-muted-foreground';
-  sub.textContent = count + (count === 1 ? ' product' : ' products');
-  wrap.appendChild(sub);
-  return wrap;
+function pill(label, href, isActive) {
+  const a = document.createElement('a');
+  a.className = PILL_BASE + ' ' + (isActive ? PILL_ACTIVE : PILL_IDLE);
+  a.href = href;
+  a.textContent = label;
+  if (isActive) a.setAttribute('aria-current', 'page');
+  return a;
 }
 
-function markActivePill(key) {
-  document.querySelectorAll('a[href^="/products?category="]').forEach(function (a) {
-    const isMatch = key && a.getAttribute('href').endsWith('category=' + key);
-    a.classList.toggle('border-primary', !!isMatch);
-    a.classList.toggle('bg-primary', !!isMatch);
-    a.classList.toggle('text-primary-foreground', !!isMatch);
-    a.classList.toggle('border-primary/20', !isMatch);
-    a.classList.toggle('text-primary/80', !isMatch);
-    if (isMatch) { a.setAttribute('aria-current', 'page'); } else { a.removeAttribute('aria-current'); }
+// The filter pills come from the categories admin has actually used, so a new
+// category added in admin shows up here without touching this page.
+function renderPills(categories, activeKey) {
+  const host = document.getElementById('products-filters');
+  if (!host) return;
+  host.textContent = '';
+  host.appendChild(pill('All products', '/products', !activeKey));
+  categories.forEach(function (c) {
+    host.appendChild(
+      pill(c.label, '/products?category=' + encodeURIComponent(c.key), c.key === activeKey)
+    );
   });
-  if (key) {
-    const all = document.querySelector('a[href="/products"]');
-    if (all) {
-      all.classList.remove('border-primary', 'bg-primary', 'text-primary-foreground', 'active');
-      all.classList.add('border-primary/20', 'text-primary/80');
-      all.removeAttribute('aria-current');
-    }
-  }
 }
 
-async function loadProducts() {
+function emptyGrid(grid, message) {
+  grid.textContent = '';
+  const p = document.createElement('p');
+  p.className = 'col-span-full text-center text-[15px] text-muted-foreground';
+  p.textContent = message;
+  grid.appendChild(p);
+}
+
+function renderGrid(products) {
+  const grid = document.getElementById('products-grid');
+  if (!grid) return;
+  if (!products.length) {
+    emptyGrid(grid, 'No products match your filters yet. Send us an enquiry and our team will advise.');
+    return;
+  }
+  grid.textContent = '';
+  cardsFor(products).forEach(function (card, i) {
+    grid.appendChild(decorate(card, products[i]));
+  });
+}
+
+function visibleProducts() {
+  const key = new URLSearchParams(window.location.search).get('category');
+  const term = (document.querySelector('input[placeholder^="Search healthcare"]') || {}).value || '';
+  const needle = term.trim().toLowerCase();
+  return ALL_PRODUCTS.filter(function (p) {
+    if (!matchesCategory(p, key)) return false;
+    if (!needle) return true;
+    return (p.title + ' ' + p.category + ' ' + p.description).toLowerCase().indexOf(needle) !== -1;
+  });
+}
+
+function applyFilters() {
+  const key = new URLSearchParams(window.location.search).get('category');
+  renderPills(categoriesOf(ALL_PRODUCTS), key);
+  renderGrid(visibleProducts());
+}
+
+async function initProductsPage() {
   const grid = document.getElementById('products-grid');
   if (!grid) return;
 
   try {
-    const res = await fetch('/products/products.json');
-    if (!res.ok) throw new Error('Failed to load product data');
-    const products = (await res.json()).filter(function (p) { return p.title; });
+    ALL_PRODUCTS = await loadProducts();
+    applyFilters();
 
-    const params = new URLSearchParams(window.location.search);
-    const key = params.get('category');
-    const only = key ? URL_CATEGORY[key] : null;
-
-    const groups = new Map();
-    products.forEach(function (p) {
-      const cat = p.category || 'General Healthcare';
-      if (only && cat !== only) return;
-      if (!groups.has(cat)) groups.set(cat, []);
-      groups.get(cat).push(p);
-    });
-
-    const ordered = CATEGORY_ORDER.filter(function (c) { return groups.has(c); })
-      .concat(Array.from(groups.keys()).filter(function (c) { return CATEGORY_ORDER.indexOf(c) === -1; }));
-
-    grid.textContent = '';
-
-    if (!ordered.length) {
-      const empty = document.createElement('p');
-      empty.className = 'col-span-full text-center text-[15px] text-muted-foreground';
-      empty.textContent = 'No products in this category yet. Send us an enquiry and our team will advise.';
-      grid.appendChild(empty);
-      return;
-    }
-
-    ordered.forEach(function (cat) {
-      const items = groups.get(cat);
-      grid.appendChild(heading(cat, items.length));
-      cardsFor(items).forEach(function (card, i) {
-        grid.appendChild(decorate(card, items[i]));
+    const search = document.querySelector('input[placeholder^="Search healthcare"]');
+    if (search) {
+      search.addEventListener('input', function () {
+        renderGrid(visibleProducts());
       });
-    });
-
-    markActivePill(only ? key : null);
+    }
   } catch (err) {
-    grid.innerHTML = '<p class="col-span-full text-center text-[15px] text-muted-foreground">We were unable to load the product list just now. Please refresh or call the clinic on +254 700 000 000.</p>';
+    emptyGrid(grid, 'We were unable to load the product list just now. Please refresh or call the clinic on +254 700 000 000.');
     console.warn('Products load error:', err);
   }
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', loadProducts);
+  document.addEventListener('DOMContentLoaded', initProductsPage);
 } else {
-  loadProducts();
+  initProductsPage();
 }
 </script>
 </body>
